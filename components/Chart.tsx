@@ -8,9 +8,9 @@ import {
     storageTank as storageTankArt,
     solarCell,
     sun
-} from "../../utils/ascii-art";
+} from "../utils/ascii-art";
 
-export default function Chart({solarPanelTempature = 55, topPipeTempature = 22, bottomPipeTempature = 22, storageTankTempature = 22}) {
+export default function Chart({solarPanelTemperature = 55, topPipeTemperature = 22, bottomPipeTemperature = 22, storageTankTemperature = 22}) {
     const coolingSystemLength = 20;
 
     const generateCoolingSystem = (firstPipeSegment: string[], lastPipeSegment: string[]): string[] => {
@@ -91,7 +91,6 @@ export default function Chart({solarPanelTempature = 55, topPipeTempature = 22, 
     const convertIntoSingleStringBasedOnChartSize = (chartSize: number, firstString: string, secondString: string) => {
         const remainingSpace = chartSize - firstString.length - secondString.length;
         let newString = '';
-        console.log(remainingSpace)
         newString += firstString;
         newString = newString.padEnd(newString.length + remainingSpace, ' ');
         newString += secondString;
@@ -99,23 +98,23 @@ export default function Chart({solarPanelTempature = 55, topPipeTempature = 22, 
     }
     
     const generateTopCoolingSystemArray = (): string[] => {
-        const topCoolingSystemSegmentLabel = [`Top Cooling System Piping System: ${topPipeTempature}°C`];
+        const topCoolingSystemSegmentLabel = [`Top Cooling System Piping System: ${topPipeTemperature}°C`];
         const topCoolingSystemSegment = generateCoolingSystem(topLeftCornerPipeSegment, topRightCornerPipeSegment);
         topCoolingSystemSegmentLabel[0] = topCoolingSystemSegmentLabel[0].padStart(topCoolingSystemSegment[0].length - 15, ' ');
         return [...topCoolingSystemSegmentLabel, ...topCoolingSystemSegment]
     }
 
     const generateSolarPanelAndStorageTankWithLabels = (longestStringLength: number) => {
-        const solarPanelTempatureLabel = `Solar Panel Tempature: ${solarPanelTempature}°C`;
-        const storageTankTempatureLabel = `Storage Tank Tempature: ${storageTankTempature}°C`;
-        const solarPanelAndStorageTankTempatureLabel = [convertIntoSingleStringBasedOnChartSize(longestStringLength + 10, solarPanelTempatureLabel, storageTankTempatureLabel)];
+        const solarPanelTemperatureLabel = `Solar Panel Temperature: ${solarPanelTemperature}°C`;
+        const storageTankTemperatureLabel = `Storage Tank Temperature: ${storageTankTemperature}°C`;
+        const solarPanelAndStorageTankTemperatureLabel = [convertIntoSingleStringBasedOnChartSize(longestStringLength + 10, solarPanelTemperatureLabel, storageTankTemperatureLabel)];
         const solarPanelAndStorageTank = generateStorageTank(generateSolarPanel(4, 5), (longestStringLength - storageTankArt[0].length) - 10)
-        return [...solarPanelAndStorageTankTempatureLabel, ...solarPanelAndStorageTank];
+        return [...solarPanelAndStorageTankTemperatureLabel, ...solarPanelAndStorageTank];
     }
 
     const generateBottomCoolingSystemArray = (longestStringLength: number): string[] => {
         const bottomCoolingSystemSegment = generateCoolingSystem(bottomLeftCornerPipeSegment, bottomRightCornerPipeSegment);
-        const bottomCoolingSystemSegmentLabel = [`Bottom Cooling System Piping System: ${bottomPipeTempature}°C`];
+        const bottomCoolingSystemSegmentLabel = [`Bottom Cooling System Piping System: ${bottomPipeTemperature}°C`];
         bottomCoolingSystemSegmentLabel[0] = bottomCoolingSystemSegmentLabel[0].padStart(longestStringLength - 15, ' ');
 
         return [...bottomCoolingSystemSegment, ...bottomCoolingSystemSegmentLabel];
@@ -128,9 +127,8 @@ export default function Chart({solarPanelTempature = 55, topPipeTempature = 22, 
         const solarPanelAndStorageTankChart = generateSolarPanelAndStorageTankWithLabels(longestString);
         const bottomSegmentForChart = generateBottomCoolingSystemArray(longestString);
 
-        
-        
-        return [...sun,
+        return [
+            ...sun,
             ...topSegmentForChart,
             ...solarPanelAndStorageTankChart,
             ...bottomSegmentForChart,

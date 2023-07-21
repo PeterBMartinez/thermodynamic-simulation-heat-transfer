@@ -2,18 +2,18 @@ import SolarPanelLayer from "./SolarPanelLayer";
 
 export default class SolarPanel {
     private _solarPanelLayers = [
-        new SolarPanelLayer(0.9, 0.0032, 2500, 700), // Glass
-        new SolarPanelLayer(0.17, 0.0003, 970, 2000), // EVA
-        new SolarPanelLayer(148, 0.0003, 2330, 700), // Silicon
-        new SolarPanelLayer(0.15, 0.0003, 1390, 1400), // Tedlar
+        new SolarPanelLayer(0.9, 0.0032, 2500, 0.700), // Glass
+        new SolarPanelLayer(0.17, 0.0003, 970, 2.000), // EVA
+        new SolarPanelLayer(148, 0.0003, 2330, 0.700), // Silicon
+        new SolarPanelLayer(0.15, 0.0003, 1390, 1.400), // Tedlar
     ];
 
     public surfaceArea = this._height * this._width;
 
     constructor(
-        public tempature = 55, // In Celcius
-        private _height = 0, // In Meters
-        private _width = 0, // In Meters
+        public temperature = 55, // In Celcius
+        private _height = 5, // In Meters
+        private _width = 10, // In Meters
         ) { }
 
 
