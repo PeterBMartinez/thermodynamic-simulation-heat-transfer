@@ -1,6 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@fontsource/roboto/300.css;
+@fontsource/roboto/400.css;
+@fontsource/roboto/500.css;
+@fontsource/roboto/700.css;
 
 :root {
   --foreground-rgb: 0, 0, 0;
@@ -16,12 +20,7 @@
   }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+body, html {
+  margin: 0;
+  padding: 0;
 }

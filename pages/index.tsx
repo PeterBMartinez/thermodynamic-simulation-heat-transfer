@@ -1,118 +1,363 @@
-import Image from 'next/image'
-import { Inter } from 'next/font/google'
+import { Button, FormControl, FormGroup, Input, InputAdornment, InputLabel } from '@mui/material'
+import Chart from '@/components/Chart/Chart'
+import { ChangeEvent, Component } from 'react';
+import SolarPanel from '..//Models/SolarPanel';
+import CoolingSystem from '../Models/CoolingSystem';
+import StorageTank from '../Models/StorageTank';
 
-const inter = Inter({ subsets: ['latin'] })
+export default class HomeSmartComponent extends Component {
+  state = {
+    duration: 5,
+    solarPanelTempature: 55,
+    solarPanelTempatureChart: 55,
+    solarPanelHeight: 5,
+    solarPanelWidth: 10,
+    coolingLiquidTempature: 22,
+    coolingLiquidFlowRate: 4,
+    storageTankTempature: 22,
+    storageTankTempatureChart: 22,
+    storageTankRadius: 1.5,
+    storageTankHeight: 6,
+    topCoolingLiquidTempatureChart: 22,
+    bottomCoolingLiquidTempatureChart: 22,
+  
+  }
 
-export default function Home() {
-  return (
-    <main
-      className={`flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
-    >
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">pages/index.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+  constructor(props: any) {
+    super(props);
+  }
+
+
+  calculateTempatureDifference = (primaryTemp: number, seconddaryTemp: number): number => {
+    return primaryTemp - seconddaryTemp;
+  };
+
+  calculateMassOfWater = (coolingSystem: CoolingSystem) => {
+    const waterFlow = coolingSystem.fluidFlowRate; // in liters
+    const flowDuration = 1;
+    const volumeOfWater = waterFlow * flowDuration;
+    const densityOfWater = 1000; // kg/m^3
+    const massOfWater = volumeOfWater * densityOfWater;
+
+    return massOfWater;
+  };
+
+  calculateConductionHeatTransferRate = (conductivity: number, area: number, tempatureDifference: number, depth: number):number => {
+    return (conductivity * area * tempatureDifference) / depth;
+  };
+
+  calculateConvectionHeatTransferRate = (convection: number, area: number, tempatureDifference: number): number => {
+    return convection * area * tempatureDifference;
+  };
+
+  calculateTempatureChange = (conductionHeatTransfer: number, duration: number, massOfWater: number, heatCapacity: number ): number => {
+    return (conductionHeatTransfer) * duration / (massOfWater * heatCapacity);
+  };
+  
+  updateInput = (event: ChangeEvent): void => {
+    const { id, value } = event.target as HTMLInputElement;
+    this.setState({
+        ...this.state,
+        [id]: parseInt(value)
+    });
+  }
+
+  roundToNearedDecimal = (number: number): number => {
+    return Math.round(number * 100) / 100
+  }
+
+  simulateHeatTransfer = (): void => {
+    // setup instances of the models
+    const { solarPanelHeight, solarPanelWidth, solarPanelTempature, coolingLiquidTempature, coolingLiquidFlowRate, storageTankTempature, storageTankRadius, storageTankHeight} = this.state;
+    const solarPanel = new SolarPanel(solarPanelTempature, solarPanelHeight, solarPanelWidth)
+    const coolingSystem = new CoolingSystem(coolingLiquidTempature, coolingLiquidFlowRate, 4182, solarPanelHeight, solarPanelWidth, 0.05)
+    const storageTank = new StorageTank(storageTankTempature, 60, storageTankRadius, storageTankHeight)
+
+    for(let i = 0; i <= this.state.duration; i++) {
+  
+      // Obtain the tempature difference between the solar panel and the cooling fluid
+
+      // need to break this function out into steps for readability
+
+      const tempatureDifferenceSolarPanelToCoolingFluid = this.calculateTempatureDifference(
+        solarPanel.tempature,
+        coolingSystem.fluidTemperatureInPipes
+      );
+
+      const tempatureDifferenceStorageTankToCoolingFluid = this.calculateTempatureDifference(
+        storageTank.tempature,
+        coolingSystem.fluidTemperatureInPipes
+      );
+  
+      // Solar
+      const solarPanelConductionHeatTransfer = this.calculateConductionHeatTransferRate(
+          solarPanel.totalThermalConductivity, 
+          solarPanel.surfaceArea,
+          coolingSystem.fluidTemperatureInPipes - solarPanel.tempature, 
+          solarPanel.totalThickness
+      );
+
+      const waterConductionHeatTransferSolarPanel = this.calculateConductionHeatTransferRate(
+          0.6, 
+          solarPanel.surfaceArea,
+          tempatureDifferenceSolarPanelToCoolingFluid, 
+          coolingSystem.depth
+      );
+
+      const waterConventionHeatTransferRateSolarPanel = this.calculateConvectionHeatTransferRate(
+        10, 
+        solarPanel.surfaceArea,
+        tempatureDifferenceSolarPanelToCoolingFluid, 
+      );
+      // end solar
+
+
+      // storage tank
+      const storageTankPanelConductionHeatTransfer = this.calculateConductionHeatTransferRate(
+        0.6, 
+        storageTank.getSurfaceArea(),
+        coolingSystem.fluidTemperatureInPipes - storageTank.tempature, 
+        solarPanel.totalThickness
+      );
+      
+      const waterConductionHeatTransferRateStorageTank = this.calculateConductionHeatTransferRate(
+        0.6, 
+        storageTank.getSurfaceArea(),
+        tempatureDifferenceStorageTankToCoolingFluid,
+        coolingSystem.depth
+      );
+
+      const waterConventionHeatTransferRateStorageTank = this.calculateConvectionHeatTransferRate(
+        0.6, 
+        storageTank.getSurfaceArea(),
+        tempatureDifferenceStorageTankToCoolingFluid, 
+      );
+      // end storage tank
+    
+
+      const waterHeatTransferTotalSolarPanel = waterConductionHeatTransferSolarPanel + waterConventionHeatTransferRateSolarPanel;
+      const waterHeatTransferStorageTank = waterConductionHeatTransferRateStorageTank + waterConventionHeatTransferRateStorageTank;
+      // Calculate the heat transfer rate through conduction
+  
+      const solarTempatureChange = this.calculateTempatureChange(
+        solarPanelConductionHeatTransfer,
+        1000,
+        this.calculateMassOfWater(coolingSystem),
+        coolingSystem.fluidHeatCapacity
+      );
+      
+      const waterTempatureChangeFromSolarPanel = this.calculateTempatureChange(
+        waterHeatTransferTotalSolarPanel,
+        1000,
+        solarPanel.totalMass, // calculate the mass of the solar panel
+        solarPanel.totalHeatCapacity // calculate the heat capacity of the solar panel
+      );
+
+      const waterTempatureChangeFromStorageTank = this.calculateTempatureChange(
+        waterHeatTransferStorageTank,
+        1000,
+        storageTank.gallons * 3.78, // calculate the mass of the storage tank
+        coolingSystem.fluidHeatCapacity // calculate the heat capacity of the storage tank
+      );
+
+      const storageTankTempatureChange = this.calculateTempatureChange(
+        storageTankPanelConductionHeatTransfer,
+        1000,
+        this.calculateMassOfWater(coolingSystem), // calculate the mass of the storageTank
+        coolingSystem.fluidHeatCapacity // calculate the heat capacity of the solar panel
+      );
+
+
+
+      solarPanel.tempature += this.roundToNearedDecimal(solarTempatureChange);
+      coolingSystem.fluidTemperatureInPipes += this.roundToNearedDecimal(waterTempatureChangeFromSolarPanel);
+      storageTank.tempature += this.roundToNearedDecimal(storageTankTempatureChange);
+
+      this.setState({
+        ...this.state,
+        solarPanelTempatureChart: solarPanel.tempature,
+        storageTankTempatureChart: storageTank.tempature,
+        topCoolingLiquidTempatureChart: coolingSystem.fluidTemperatureInPipes,
+      }, () => {
+        coolingSystem.fluidTemperatureInPipes += this.roundToNearedDecimal(waterTempatureChangeFromStorageTank);
+  
+        this.setState({
+          ...this.state,
+          bottomCoolingLiquidTempatureChart: coolingSystem.fluidTemperatureInPipes,
+        })
+      })
+    }
+  }
+
+
+  render() {
+    return (
+    <section className="flex">
+      <div className="input-containers flex flex-col p-12">
+      <div className="mb-5">
+          <h1 className="mb-4">Time Settings</h1>
+          <FormGroup className="flex flex-row">
+          <FormControl variant="standard">
+              <InputLabel>Duration of simulation (seconds)</InputLabel>
+              <Input 
+                className="m-3"
+                id="duration"
+                defaultValue={this.state.duration}
+                type='number'
+                onChange={(e: ChangeEvent) => this.updateInput(e)}
+                startAdornment={
+                  <InputAdornment position="start">
+                    Seconds
+                  </InputAdornment>
+                }
+              />
+            </FormControl>
+          </FormGroup>
+        </div>
+        <div className="mb-5">
+          <h1 className="mb-4">Solar Panel Settings</h1>
+          <FormGroup className="flex flex-row">
+            <FormControl variant="standard">
+              <InputLabel>Solar Panel Tempature</InputLabel>
+              <Input 
+                className="m-3"
+                id="solarPanelTempature"
+                defaultValue={this.state.solarPanelTempature}
+                type='number'
+                onChange={(e: ChangeEvent) => this.updateInput(e)}
+                startAdornment={
+                  <InputAdornment position="start">
+                    °C
+                  </InputAdornment>
+                }
+                />
+            </FormControl>
+            <FormControl variant="standard">
+              <InputLabel>Solar Panel Width</InputLabel>
+              <Input 
+                className="m-3"
+                id="solarPanelWidth"
+                defaultValue={this.state.solarPanelWidth}
+                type='number'
+                onChange={(e: ChangeEvent) => this.updateInput(e)}
+                startAdornment={
+                  <InputAdornment position="start">
+                    Meters
+                  </InputAdornment>
+                }
+              />
+            </FormControl>
+            <FormControl variant="standard">
+              <InputLabel>Solar Panel Height</InputLabel>
+              <Input 
+                className="m-3"
+                id="solarPanelHeight"
+                defaultValue={this.state.solarPanelHeight}
+                type='number'
+                onChange={(e: ChangeEvent) => this.updateInput(e)}
+                startAdornment={
+                  <InputAdornment position="start">
+                    Meters
+                  </InputAdornment>
+                }
+                />
+            </FormControl>
+          </FormGroup>
+        </div>
+        <div className="mb-5">
+          <h1 className="mb-4">Cooling System Settings</h1>
+          <FormGroup className="flex flex-row">
+          <FormControl variant="standard">
+              <InputLabel>Cooling fluid Starting Tempature</InputLabel>
+              <Input 
+                className="m-3"
+                id="coolingLiquidTempature"
+                defaultValue={this.state.coolingLiquidTempature}
+                type='number'
+                onChange={(e: ChangeEvent) => this.updateInput(e)}
+                startAdornment={
+                  <InputAdornment position="start">
+                    °C
+                  </InputAdornment>
+                }
+                />
+            </FormControl>
+            <FormControl variant="standard">
+              <InputLabel>Cooling fluid flow rate</InputLabel>
+              <Input 
+                className="m-3"
+                id="coolingLiquidFlowRate"
+                defaultValue={this.state.coolingLiquidFlowRate}
+                type='number'
+                onChange={(e: ChangeEvent) => this.updateInput(e)}
+                startAdornment={
+                  <InputAdornment position="start">
+                    Liters per Second
+                  </InputAdornment>
+                }
+                />
+            </FormControl>
+          </FormGroup>
+        </div>
+        <div className="mb-5">
+          <h1 className="mb-4">Storage Tank Settings</h1>
+          <FormGroup className="flex flex-row">
+            <FormControl variant="standard">
+                <InputLabel>Storage Tank Starting Tempature</InputLabel>
+                <Input 
+                  className="m-3"
+                  id="storageTankTempature"
+                  defaultValue={this.state.storageTankTempature}
+                  type='number'
+                  onChange={(e: ChangeEvent) => this.updateInput(e)}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      °C
+                    </InputAdornment>
+                  }
+                  />
+              </FormControl>
+            <FormControl variant="standard">
+                <InputLabel>Storage Tank Height</InputLabel>
+                <Input 
+                  className="m-3"
+                  id="coolingLiquidTempature"
+                  defaultValue={this.state.storageTankHeight}
+                  type='number'
+                  onChange={(e: ChangeEvent) => this.updateInput(e)}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      Height
+                    </InputAdornment>
+                  }
+                  />
+            </FormControl>
+            <FormControl variant="standard">
+              <InputLabel>Storage Tank Radius</InputLabel>
+              <Input 
+                className="m-3"
+                id="coolingLiquidFlowRate"
+                defaultValue={this.state.storageTankRadius}
+                type='number'
+                onChange={(e: ChangeEvent) => this.updateInput(e)}
+                startAdornment={
+                  <InputAdornment position="start">
+                    Radius
+                  </InputAdornment>
+                }
+                />
+            </FormControl>
+          </FormGroup>
+        <Button className="m-auto flex mb-12" onClick={this.simulateHeatTransfer}>Simulate</Button>
         </div>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700/10 after:dark:from-sky-900 after:dark:via-[#0141ff]/40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Discover and deploy boilerplate example Next.js&nbsp;projects.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+      <hr/>
+      <Chart 
+        solarPanelTempature={this.state.solarPanelTempatureChart}
+        storageTankTempature={this.state.storageTankTempatureChart}
+        topPipeTempature={this.state.topCoolingLiquidTempatureChart}
+        bottomPipeTempature={this.state.bottomCoolingLiquidTempatureChart}/>
+    </section>
+    );
+  }
 }
